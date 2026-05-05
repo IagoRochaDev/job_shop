@@ -1,39 +1,59 @@
 #include <iostream>
-#include <exception>
-#include <string>
-#include "domain/instancia.hpp"
-#include "solvers/solver_JPS.hpp"
+#include <iomanip>
+#include <sstream>
 
-int main(int argc, char* argv[]) {
-    try {
-        const std::string caminho = (argc > 1 ? argv[1] : "res/instancias/JSP/ta01Jsp.psi");
-        Instancia instancia(caminho);
+#include "instancia.hpp"
+#include "solverJSP.hpp"
 
-        Solver_JPS solver(instancia);
-        if (!solver.solver()) {
-            std::cerr << "Falha ao resolver o problema." << std::endl;
-            return 1;
-        }
+using namespace std;
 
-        const auto& solucao = solver.get_solucao();
-        std::cout << "Arquivo lido: " << caminho << "\n";
-        std::cout << "Total de jobs: " << instancia.costs.size() << "\n";
-        if (!instancia.costs.empty()) {
-            std::cout << "Total de maquinas: " << instancia.costs[0].size() << "\n";
-        }
-        std::cout << "Makespan calculado: " << solucao.makespan_valor << "\n";
-        std::cout << "Caminho critico (vertices): ";
-        for (size_t i = 0; i < solucao.caminho_maximo_vertices.size(); ++i) {
-            std::cout << solucao.caminho_maximo_vertices[i];
-            if (i + 1 < solucao.caminho_maximo_vertices.size()) {
-                std::cout << " -> ";
-            }
-        }
-        std::cout << "\n";
-    } catch (const std::exception& ex) {
-        std::cerr << "Erro: " << ex.what() << "\n";
-        return 1;
+int main() {
+
+    double somaGap = 0.0;
+    int totalInstancias = 0;
+
+    cout << fixed << setprecision(2);
+
+    for (int i = 1; i <= 40; i++) {
+
+        stringstream ss;
+        ss << "../instancias/ta";
+
+        if (i < 10) ss << "0";
+        ss << i << "Jsp.psi";
+
+        string caminho = ss.str();
+
+        cout << "\n=============================\n";
+        cout << "Instancia: " << caminho << endl;
+
+        Instancia inst;
+        inst.ler_arquivo(caminho);
+
+        SolverJSP solver;
+
+        solver.jobs = inst.jobsCount;
+        solver.machines = inst.machinesCount;
+
+        int lb = solver.lowerBound(inst);
+
+        Solucao sol = solver.resolver(inst);
+
+        sol.imprimir();
+
+        int makespan = sol.makespan;
+
+        double gap = ((double)(makespan - lb) / lb) * 100.0;
+
+        cout << "\n=============================\n";
+        cout << "GAP (%): " << gap << endl;
+
+        somaGap += gap;
+        totalInstancias++;
     }
+
+    cout << "\n=============================\n";
+    cout << "MEDIA GAP (%): " << (somaGap / totalInstancias) << endl;
 
     return 0;
 }
